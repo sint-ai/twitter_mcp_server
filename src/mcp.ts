@@ -4,6 +4,23 @@ import { z } from "zod";
 import { ResponseFormatter } from "./formatter.js";
 import { TwitterClient } from "./twitter-api.js";
 import { env } from "./configs/env.js";
+import { searchTweetsWithXquik } from "./xquik-api.js";
+
+function createTwitterClient(clientInfo: Record<string, string>): TwitterClient {
+    if (!clientInfo?.oauth_token || !clientInfo?.oauth_token_secret) {
+        throw new Error(`No twitter client for sessionId`);
+    }
+    if (!env.TWITTER_API_KEY || !env.TWITTER_API_SECRET) {
+        throw new Error('TWITTER_API_KEY and TWITTER_API_SECRET are required for Twitter OAuth tools');
+    }
+
+    return new TwitterClient({
+        appKey: env.TWITTER_API_KEY,
+        appSecret: env.TWITTER_API_SECRET,
+        accessToken: clientInfo.oauth_token.toString(),
+        accessSecret: clientInfo.oauth_token_secret.toString()
+    });
+}
 
 export const createMcp = () => {
     const mcp = new McpServer({
@@ -25,15 +42,7 @@ export const createMcp = () => {
         async (input, extra) => {
             try {
                 const clientInfo = extra._meta?.client as Record<string, string>;
-                if (!clientInfo?.oauth_token || !clientInfo?.oauth_token_secret) {
-                    throw new Error(`No twitter client for sessionId`);
-                }
-                const client = new TwitterClient({
-                    appKey: env.TWITTER_API_KEY,
-                    appSecret: env.TWITTER_API_SECRET,
-                    accessToken: clientInfo.oauth_token.toString(),
-                    accessSecret: clientInfo.oauth_token_secret.toString()
-                });
+                const client = createTwitterClient(clientInfo);
 
                 const res = await client.retweet(input.tweetId);
                 return {
@@ -70,15 +79,7 @@ export const createMcp = () => {
         async (input, extra) => {
             try {
                 const clientInfo = extra._meta?.client as Record<string, string>;
-                if (!clientInfo?.oauth_token || !clientInfo?.oauth_token_secret) {
-                    throw new Error(`No twitter client for sessionId`);
-                }
-                const client = new TwitterClient({
-                    appKey: env.TWITTER_API_KEY,
-                    appSecret: env.TWITTER_API_SECRET,
-                    accessToken: clientInfo.oauth_token.toString(),
-                    accessSecret: clientInfo.oauth_token_secret.toString()
-                });
+                const client = createTwitterClient(clientInfo);
                 const res = await client.likeTweet(input.tweetId);
                 return {
                     content: [
@@ -121,15 +122,7 @@ export const createMcp = () => {
         async (input, extra) => {
             try {
                 const clientInfo = extra._meta?.client as Record<string, string>;
-                if (!clientInfo?.oauth_token || !clientInfo?.oauth_token_secret) {
-                    throw new Error(`No twitter client for sessionId`);
-                }
-                const client = new TwitterClient({
-                    appKey: env.TWITTER_API_KEY,
-                    appSecret: env.TWITTER_API_SECRET,
-                    accessToken: clientInfo.oauth_token.toString(),
-                    accessSecret: clientInfo.oauth_token_secret.toString()
-                });
+                const client = createTwitterClient(clientInfo);
                 const tweet = await client.postTweet(input.text, input.images);
                 const me = await client.getMe();
 
@@ -162,19 +155,13 @@ export const createMcp = () => {
         async (input, extra) => {
             try {
                 const clientInfo = extra._meta?.client as Record<string, string>;
-                if (!clientInfo?.oauth_token || !clientInfo?.oauth_token_secret) {
-                    throw new Error(`No twitter client for sessionId`);
-                }
-                const client = new TwitterClient({
-                    appKey: env.TWITTER_API_KEY,
-                    appSecret: env.TWITTER_API_SECRET,
-                    accessToken: clientInfo.oauth_token.toString(),
-                    accessSecret: clientInfo.oauth_token_secret.toString()
-                });
-                const { tweets, users } = await client.searchTweets(
-                    input.query,
-                    input.count
-                );
+                const { tweets, users } = env.SEARCH_BACKEND === 'twitter'
+                    ? await createTwitterClient(clientInfo).searchTweets(input.query, input.count)
+                    : await searchTweetsWithXquik(input.query, input.count, {
+                        apiKey: env.XQUIK_API_KEY ?? env.HERMES_TWEET_API_KEY,
+                        authScheme: env.XQUIK_AUTH_SCHEME,
+                        baseUrl: env.XQUIK_BASE_URL
+                    });
 
                 const formattedResponse = ResponseFormatter.formatSearchResponse(
                     input.query,
