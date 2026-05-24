@@ -22,6 +22,10 @@ function createTwitterClient(clientInfo: Record<string, string>): TwitterClient 
     });
 }
 
+function xquikSearchApiKey(): string | undefined {
+    return env.XQUIK_API_KEY?.trim() || env.HERMES_TWEET_API_KEY?.trim();
+}
+
 export const createMcp = () => {
     const mcp = new McpServer({
         name: 'twitter-mcp',
@@ -158,7 +162,7 @@ export const createMcp = () => {
                 const { tweets, users } = env.SEARCH_BACKEND === 'twitter'
                     ? await createTwitterClient(clientInfo).searchTweets(input.query, input.count)
                     : await searchTweetsWithXquik(input.query, input.count, {
-                        apiKey: env.XQUIK_API_KEY ?? env.HERMES_TWEET_API_KEY,
+                        apiKey: xquikSearchApiKey(),
                         authScheme: env.XQUIK_AUTH_SCHEME,
                         baseUrl: env.XQUIK_BASE_URL
                     });

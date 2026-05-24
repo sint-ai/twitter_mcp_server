@@ -5,7 +5,8 @@ const toolHandlers: Record<string, (input: any, extra: any) => Promise<any>> = {
 const mocks = vi.hoisted(() => {
     process.env.NODE_ENV = 'development';
     process.env.SEARCH_BACKEND = 'xquik';
-    process.env.XQUIK_API_KEY = 'test-xquik-key';
+    process.env.XQUIK_API_KEY = '';
+    process.env.HERMES_TWEET_API_KEY = 'test-hermes-key';
     process.env.XQUIK_BASE_URL = 'https://example.test';
 
     return {
@@ -69,7 +70,7 @@ describe('mcp.ts with Xquik search backend', () => {
 
         expect(mocks.twitterClient).not.toHaveBeenCalled();
         expect(mocks.searchTweetsWithXquik).toHaveBeenCalledWith('Hermes Tweet', 10, {
-            apiKey: 'test-xquik-key',
+            apiKey: 'test-hermes-key',
             authScheme: 'api-key',
             baseUrl: 'https://example.test'
         });
